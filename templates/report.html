@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Reports — HostelPro{% endblock %}
+
+{% block nav %}
+<nav>
+  <a href="/admin" class="nav-brand">HOSTEL<span style="color:var(--text);">PRO</span></a>
+  <div class="nav-links">
+    <a href="/admin" class="btn btn-ghost btn-sm">← Admin Panel</a>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div style="margin-bottom:2rem;">
+    <h1 style="font-family:var(--mono);font-size:1.3rem;letter-spacing:1px;">Analytics & Reports</h1>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:.25rem;">Financial overview and operational insights</p>
+  </div>
+
+  {% if chart_generated %}
+  <div class="card">
+    <div class="card-title">Visual Charts</div>
+    <img src="/static/report.png" alt="Reports Chart" style="width:100%;border-radius:6px;">
+  </div>
+  {% endif %}
+
+  <div class="grid-2">
+    <!-- Payments by Date -->
+    <div class="card" style="margin:0;">
+      <div class="card-title">Daily Collections</div>
+      {% if payment_data %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Amount</th></tr></thead>
+          <tbody>
+          {% for row in payment_data %}
+          <tr>
+            <td style="font-family:var(--mono);">{{ row['date'] }}</td>
+            <td style="font-family:var(--mono);color:var(--green);font-weight:700;">₹{{ "{:,}".format(row['total']) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">No payment data</div>
+      {% endif %}
+    </div>
+
+    <!-- Monthly Payments -->
+    <div class="card" style="margin:0;">
+      <div class="card-title">Monthly Collections</div>
+      {% if monthly %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Total</th></tr></thead>
+          <tbody>
+          {% for row in monthly %}
+          <tr>
+            <td>{{ row['month'] or '—' }}</td>
+            <td style="font-family:var(--mono);color:var(--green);font-weight:700;">₹{{ "{:,}".format(row['total']) }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">No monthly data</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:1.5rem;">
+    <!-- Complaints by Status -->
+    <div class="card" style="margin:0;">
+      <div class="card-title">Complaints Summary</div>
+      {% if complaint_data %}
+      {% for row in complaint_data %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:.875rem;">{{ row['status'] }}</span>
+        <span style="font-family:var(--mono);font-weight:700;
+          {% if row['status']=='Resolved' %}color:var(--green);
+          {% elif row['status']=='Pending' %}color:var(--red);
+          {% else %}color:var(--yellow);{% endif %}">{{ row['cnt'] }}</span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty">No complaint data</div>
+      {% endif %}
+    </div>
+
+    <!-- Room Occupancy -->
+    <div class="card" style="margin:0;">
+      <div class="card-title">Room Occupancy by Type</div>
+      {% if room_data %}
+      {% for row in room_data %}
+      <div style="padding:.75rem 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;">
+          <span style="font-weight:600;">{{ row['type'] }}</span>
+          <span style="font-family:var(--mono);font-size:.8rem;color:var(--muted);">{{ row['occ'] }} / {{ row['cap'] }}</span>
+        </div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:{{ ((row['occ']/row['cap'])*100)|int if row['cap'] else 0 }}%;background:{% if row['occ']>=row['cap'] %}var(--red){% else %}var(--green){% endif %};border-radius:3px;transition:.3s;"></div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty">No room data</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

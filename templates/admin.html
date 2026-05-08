@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — HostelPro{% endblock %}
+
+{% block nav %}
+<nav>
+  <a href="/admin" class="nav-brand" style="color:var(--red);">HOSTEL<span style="color:var(--text);">PRO</span> <span style="font-size:.6rem;color:var(--muted);letter-spacing:2px;margin-left:.5rem;">ADMIN</span></a>
+  <div class="nav-links">
+    <span style="color:var(--muted);font-size:.8rem;">{{ session.get('admin_name','Admin') }}</span>
+    <a href="/report" class="btn btn-ghost btn-sm">Reports</a>
+    <a href="/guard" class="btn btn-ghost btn-sm">Guard Panel</a>
+    <a href="/admin/logout" class="btn btn-danger btn-sm">Logout</a>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div style="margin-bottom:2rem;">
+    <h1 style="font-family:var(--mono);font-size:1.3rem;letter-spacing:1px;">Admin Dashboard</h1>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:.25rem;">Full hostel management control panel</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card stat-blue">
+      <div class="label">Total Students</div>
+      <div class="value">{{ total_students }}</div>
+      <div class="sub">{{ active_students }} active</div>
+    </div>
+    <div class="stat-card stat-yellow">
+      <div class="label">Pending Applications</div>
+      <div class="value">{{ pending|length }}</div>
+      <div class="sub">Awaiting review</div>
+    </div>
+    <div class="stat-card stat-green">
+      <div class="label">Total Collected</div>
+      <div class="value">₹{{ "{:,}".format(total_collected) }}</div>
+      <div class="sub">All payments</div>
+    </div>
+    <div class="stat-card stat-red">
+      <div class="label">Open Complaints</div>
+      <div class="value">{{ pending_complaints }}</div>
+      <div class="sub">Need attention</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total Rooms</div>
+      <div class="value" style="color:var(--text);">{{ total_rooms }}</div>
+      <div class="sub">{{ full_rooms }} fully occupied</div>
+    </div>
+    <div class="stat-card stat-yellow">
+      <div class="label">Pending Leaves</div>
+      <div class="value">{{ pending_leaves }}</div>
+      <div class="sub">Awaiting approval</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <button class="tab active" data-target="tab-students">Students</button>
+      <button class="tab" data-target="tab-pending">Applications {% if pending %}<span class="badge badge-yellow" style="margin-left:.25rem;">{{ pending|length }}</span>{% endif %}</button>
+      <button class="tab" data-target="tab-rooms">Rooms</button>
+      <button class="tab" data-target="tab-complaints">Complaints {% if pending_complaints %}<span class="badge badge-red" style="margin-left:.25rem;">{{ pending_complaints }}</span>{% endif %}</button>
+      <button class="tab" data-target="tab-payments">Payments</button>
+      <button class="tab" data-target="tab-leaves">Leaves {% if pending_leaves %}<span class="badge badge-yellow" style="margin-left:.25rem;">{{ pending_leaves }}</span>{% endif %}</button>
+      <button class="tab" data-target="tab-transfers">Transfers</button>
+      <button class="tab" data-target="tab-notices">Notices</button>
+      <button class="tab" data-target="tab-meals">Meals</button>
+      <button class="tab" data-target="tab-parcels">Parcels</button>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="tab-panel active" id="tab-students">
+      <div class="card">
+        <div class="card-title">All Students ({{ students|length }})</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Phone</th><th>Room</th><th>Course</th><th>Fee</th><th>Paid</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for s in students %}
+            <tr>
+              <td style="font-family:var(--mono);color:var(--muted);">{{ s['id'] }}</td>
+              <td style="font-weight:600;">{{ s['name'] }}</td>
+              <td style="font-family:var(--mono);font-size:.8rem;">{{ s['phone'] }}</td>
+              <td><span class="badge badge-blue">{{ s['room'] or '—' }}</span></td>
+              <td style="color:var(--muted);font-size:.8rem;">{{ s['course'] or '—' }}</td>
+              <td style="font-family:var(--mono);">₹{{ s['fee'] }}</td>
+              <td style="font-family:var(--mono);color:var(--green);">₹{{ s['paid'] }}</td>
+              <td style="font-family:var(--mono);color:{% if (s['fee']-s['paid']) > 0 %}var(--red){% else %}var(--green){% endif %};">₹{{ s['fee']-s['paid'] }}</td>
+              <td>
+                {% if s['status']=='Active' %}<span class="badge badge-green">Active</span>
+                {% else %}<span class="badge badge-red">Inactive</span>{% endif %}
+              </td>
+              <td>
+                <div style="display:flex;gap:.5rem;">
+                  <a href="/pay/{{ s['phone'] }}" class="btn btn-warning btn-sm">Pay</a>
+                  <a href="/admin/student/toggle/{{ s['phone'] }}" class="btn btn-ghost btn-sm">Toggle</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if not students %}
+        <div class="empty">No students registered</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- PENDING APPLICATIONS -->
+    <div class="tab-panel" id="tab-pending">
+      <div class="card">
+        <div class="card-title">Pending Applications</div>
+        {% if pending %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Room Type</th><th>Course</th><th>Guardian</th><th>Applied</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for p in pending %}
+            <tr>
+              <td style="font-weight:600;">{{ p['name'] }}</td>
+              <td style="font-family:var(--mono);font-size:.8rem;">{{ p['phone'] }}</td>
+              <td style="font-size:.8rem;">{{ p['email'] }}</td>
+              <td><span class="badge badge-blue">{{ p['room_type'] }}</span></td>
+              <td style="color:var(--muted);font-size:.8rem;">{{ p['course'] or '—' }}</td>
+              <td style="font-size:.8rem;">{{ p['guardian'] or '—' }} {% if p['guardian_phone'] %}<br><span style="color:var(--muted);font-family:var(--mono);font-size:.7rem;">{{ p['guardian_phone'] }}</span>{% endif %}</td>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+              <td>
+                <div style="display:flex;gap:.5rem;">
+                  <a href="/approve/{{ p['id'] }}" class="btn btn-success btn-sm">Approve</a>
+                  <a href="/reject/{{ p['id'] }}" class="btn btn-danger btn-sm">Reject</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No pending applications</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ROOMS -->
+    <div class="tab-panel" id="tab-rooms">
+      <div class="card">
+        <div class="card-title">Room Status</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;">
+          {% for r in rooms %}
+          <div style="background:var(--surface);border:1px solid {% if r['occupied']>=r['capacity'] %}var(--red){% elif r['occupied']==0 %}var(--green){% else %}var(--border){% endif %};border-radius:8px;padding:1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+              <span style="font-family:var(--mono);font-size:1rem;font-weight:700;">{{ r['room_no'] }}</span>
+              {% if r['occupied']>=r['capacity'] %}<span class="badge badge-red">FULL</span>
+              {% elif r['occupied']==0 %}<span class="badge badge-green">VACANT</span>
+              {% else %}<span class="badge badge-yellow">PARTIAL</span>{% endif %}
+            </div>
+            <div style="color:var(--muted);font-size:.75rem;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:.5rem;">{{ r['type'] }} · Floor {{ r['floor'] }}</div>
+            <div style="font-size:.875rem;margin-bottom:.5rem;">
+              <span style="color:var(--red);">{{ r['occupied'] }}</span>
+              <span style="color:var(--muted);"> / {{ r['capacity'] }} occupied</span>
+            </div>
+            <!-- Occupancy bar -->
+            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+              <div style="height:100%;width:{{ (r['occupied']/r['capacity']*100)|int }}%;background:{% if r['occupied']>=r['capacity'] %}var(--red){% else %}var(--green){% endif %};border-radius:2px;"></div>
+            </div>
+            {% if r['amenities'] %}
+            <div style="color:var(--muted);font-size:.7rem;margin-top:.5rem;">{{ r['amenities'] }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLAINTS -->
+    <div class="tab-panel" id="tab-complaints">
+      <div class="card">
+        <div class="card-title">Complaints Management</div>
+        {% if complaints %}
+        {% for c in complaints %}
+        <div style="padding:1rem 0;border-bottom:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem;">
+            <div>
+              <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+                <span style="font-weight:600;">{{ c['name'] or c['student_phone'] }}</span>
+                <span class="badge badge-gray">{{ c['category'] }}</span>
+                {% if c['status']=='Resolved' %}<span class="badge badge-green">Resolved</span>
+                {% elif c['status']=='In Progress' %}<span class="badge badge-yellow">In Progress</span>
+                {% else %}<span class="badge badge-red">Pending</span>{% endif %}
+              </div>
+              <div style="font-size:.875rem;color:var(--text);margin:.5rem 0;">{{ c['message'] }}</div>
+              {% if c['admin_reply'] %}
+              <div style="font-size:.8rem;color:var(--accent);">Reply: {{ c['admin_reply'] }}</div>
+              {% endif %}
+              <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted);">{{ c['date'] }}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" data-modal="modal-complaint-{{ c['id'] }}">Reply</button>
+          </div>
+        </div>
+
+        <!-- Reply Modal -->
+        <div class="modal-overlay" id="modal-complaint-{{ c['id'] }}">
+          <div class="modal">
+            <div class="modal-title">Reply to Complaint</div>
+            <p style="color:var(--muted);font-size:.875rem;margin-bottom:1rem;">{{ c['message'] }}</p>
+            <form method="POST" action="/admin/complaint/reply/{{ c['id'] }}">
+              <div class="form-group">
+                <label>Status</label>
+                <select name="status">
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Resolved" selected>Resolved</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Reply Message</label>
+                <textarea name="reply" rows="3" placeholder="Your response..." required></textarea>
+              </div>
+              <div style="display:flex;gap:.75rem;">
+                <button type="submit" class="btn btn-primary">Send Reply</button>
+                <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty">No complaints filed</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="tab-panel" id="tab-payments">
+      <div class="card">
+        <div class="card-title">Recent Payments</div>
+        {% if payments %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Student</th><th>Month</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in payments %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+              <td style="font-weight:500;">{{ p['name'] or p['student_phone'] }}</td>
+              <td style="color:var(--muted);font-size:.8rem;">{{ p['month'] or '—' }}</td>
+              <td style="font-family:var(--mono);color:var(--green);font-weight:700;">₹{{ p['amount'] }}</td>
+              <td><span class="badge badge-blue">{{ p['mode'] }}</span></td>
+              <td style="font-family:var(--mono);font-size:.7rem;color:var(--muted);">{{ p['receipt_no'] or '—' }}</td>
+              <td><span class="badge badge-green">{{ p['status'] }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No payments recorded</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- LEAVES -->
+    <div class="tab-panel" id="tab-leaves">
+      <div class="card">
+        <div class="card-title">Leave Applications</div>
+        {% if leaves %}
+        {% for l in leaves %}
+        <div style="padding:1rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <div style="font-weight:600;margin-bottom:.25rem;">{{ l['name'] or l['student_phone'] }}</div>
+            <div style="font-family:var(--mono);font-size:.8rem;color:var(--accent);">{{ l['from_date'] }} → {{ l['to_date'] }}</div>
+            <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem;">{{ l['reason'] or 'No reason provided' }}</div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            {% if l['status']=='Approved' %}<span class="badge badge-green">Approved</span>
+            {% elif l['status']=='Rejected' %}<span class="badge badge-red">Rejected</span>
+            {% else %}
+            <a href="/admin/leave/{{ l['id'] }}/approve" class="btn btn-success btn-sm">Approve</a>
+            <a href="/admin/leave/{{ l['id'] }}/reject" class="btn btn-danger btn-sm">Reject</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty">No leave applications</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- TRANSFERS -->
+    <div class="tab-panel" id="tab-transfers">
+      <div class="card">
+        <div class="card-title">Room Transfer Requests</div>
+        {% if transfers %}
+        {% for t in transfers %}
+        <div style="padding:1rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <div style="font-weight:600;margin-bottom:.25rem;">{{ t['name'] or t['student_phone'] }}</div>
+            <div style="font-size:.875rem;">→ Requesting <span style="color:var(--accent);">{{ t['to_room_type'] }} Room</span></div>
+            <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem;">{{ t['reason'] or '—' }}</div>
+            <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-top:.25rem;">{{ t['date'] }}</div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            {% if t['status']=='Approved' %}<span class="badge badge-green">Approved</span>
+            {% elif t['status']=='Rejected' %}<span class="badge badge-red">Rejected</span>
+            {% else %}
+            <a href="/admin/transfer/{{ t['id'] }}/approve" class="btn btn-success btn-sm">Approve</a>
+            <a href="/admin/transfer/{{ t['id'] }}/reject" class="btn btn-danger btn-sm">Reject</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty">No transfer requests</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- NOTICES -->
+    <div class="tab-panel" id="tab-notices">
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Post Notice</div>
+          <form method="POST" action="/admin/notice/add">
+            <div class="form-group">
+              <label>Title</label>
+              <input type="text" name="title" placeholder="Notice title" required>
+            </div>
+            <div class="form-group">
+              <label>Message</label>
+              <textarea name="body" rows="4" placeholder="Notice content..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select name="priority">
+                <option value="Normal">Normal</option>
+                <option value="Important">Important</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-full">Post Notice</button>
+          </form>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">Active Notices</div>
+          {% if notices %}
+          {% for n in notices %}
+          <div style="padding:.75rem 0;border-bottom:1px solid rgba(30,58,95,.4);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;">
+                  {% if n['priority']=='Urgent' %}<span class="badge badge-red">Urgent</span>
+                  {% elif n['priority']=='Important' %}<span class="badge badge-yellow">Important</span>
+                  {% else %}<span class="badge badge-blue">Normal</span>{% endif %}
+                  <span style="font-weight:600;font-size:.875rem;">{{ n['title'] }}</span>
+                </div>
+                <div style="color:var(--muted);font-size:.8rem;">{{ n['body'] }}</div>
+                <div style="font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-top:.25rem;">{{ n['date'] }}</div>
+              </div>
+              <a href="/admin/notice/delete/{{ n['id'] }}" class="btn btn-danger btn-sm" onclick="return confirm('Delete this notice?')">×</a>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty">No notices posted</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- MEALS -->
+    <div class="tab-panel" id="tab-meals">
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Add Meal Menu</div>
+          <form method="POST" action="/admin/meal/add">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" name="date" value="{{ now if now else '' }}">
+            </div>
+            <div class="form-group">
+              <label>Meal Session</label>
+              <select name="session">
+                <option>Breakfast</option>
+                <option>Lunch</option>
+                <option>Dinner</option>
+                <option>Snacks</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Menu</label>
+              <textarea name="menu" rows="4" placeholder="Idli, Sambar, Chutney&#10;Chai..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-full">Add Menu</button>
+          </form>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">Meal Feedback Summary</div>
+          <p style="color:var(--muted);font-size:.875rem;">Students can rate meals from their dashboard. Feedback data appears in the Reports section.</p>
+          <br>
+          <a href="/report" class="btn btn-ghost btn-full">View Detailed Reports →</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARCELS -->
+    <div class="tab-panel" id="tab-parcels">
+      <div class="card">
+        <div class="card-title">Recent Parcels</div>
+        {% if parcels %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Student</th><th>Parcel</th><th>Sender</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in parcels %}
+            <tr>
+              <td style="font-weight:500;">{{ p['student_phone'] }}</td>
+              <td>{{ p['parcel_name'] }}</td>
+              <td style="color:var(--muted);">{{ p['sender'] or '—' }}</td>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+              <td>
+                {% if p['status']=='Arrived' %}<span class="badge badge-yellow">Arrived</span>
+                {% elif p['status']=='Collected' %}<span class="badge badge-green">Collected</span>
+                {% else %}<span class="badge badge-gray">{{ p['status'] }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No parcels on record</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- end tabs-container -->
+</div>
+{% endblock %}

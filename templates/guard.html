@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Guard Panel — HostelPro{% endblock %}
+
+{% block nav %}
+<nav>
+  <a href="/guard" class="nav-brand" style="color:var(--yellow);">HOSTEL<span style="color:var(--text);">PRO</span> <span style="font-size:.6rem;color:var(--muted);letter-spacing:2px;margin-left:.5rem;">GUARD</span></a>
+  <div class="nav-links">
+    <a href="/student" class="btn btn-ghost btn-sm">Student Portal</a>
+    <a href="/admin/login" class="btn btn-ghost btn-sm">Admin</a>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div style="margin-bottom:2rem;">
+    <h1 style="font-family:var(--mono);font-size:1.3rem;letter-spacing:1px;color:var(--yellow);">Guard Panel</h1>
+    <p style="color:var(--muted);font-size:.875rem;margin-top:.25rem;">Entry/Exit logging and parcel management</p>
+  </div>
+
+  {% if msg %}
+  <div class="alert alert-{{ msg[0] }}">{{ msg[1] }}</div>
+  {% endif %}
+
+  {% if student_info %}
+  <div class="alert alert-info" style="margin-bottom:1.5rem;">
+    📋 <strong>{{ student_info['name'] }}</strong> · Room {{ student_info['room'] }} · {{ student_info['phone'] }}
+    <span class="badge {% if student_info['status']=='Active' %}badge-green{% else %}badge-red{% endif %}" style="margin-left:.5rem;">{{ student_info['status'] }}</span>
+  </div>
+  {% endif %}
+
+  <div class="grid-2" style="margin-bottom:1.5rem;">
+
+    <!-- Entry / Exit -->
+    <div class="card" style="margin:0;">
+      <div class="card-title" style="color:var(--yellow);">Entry / Exit Log</div>
+      <form method="POST">
+        <div class="form-group">
+          <label>Student Phone Number</label>
+          <input type="tel" name="phone" placeholder="9876543210" maxlength="10" required autofocus>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+            <label style="all:unset;cursor:pointer;">
+              <input type="radio" name="status" value="IN" checked style="width:auto;margin-right:.5rem;">
+              <span class="badge badge-green" style="font-size:.8rem;padding:6px 16px;">IN</span>
+            </label>
+            <label style="all:unset;cursor:pointer;">
+              <input type="radio" name="status" value="OUT" style="width:auto;margin-right:.5rem;">
+              <span class="badge badge-red" style="font-size:.8rem;padding:6px 16px;">OUT</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Guard Note (Optional)</label>
+          <input type="text" name="note" placeholder="Any observation...">
+        </div>
+        <button type="submit" name="action" value="entry" class="btn btn-warning btn-full">Log Entry / Exit</button>
+      </form>
+    </div>
+
+    <!-- Parcel -->
+    <div class="card" style="margin:0;">
+      <div class="card-title">Log Parcel Arrival</div>
+      <form method="POST">
+        <div class="form-group">
+          <label>Student Phone Number</label>
+          <input type="tel" name="phone" placeholder="9876543210" maxlength="10" required>
+        </div>
+        <div class="form-group">
+          <label>Parcel Description</label>
+          <input type="text" name="parcel" placeholder="Amazon package, courier, etc." required>
+        </div>
+        <div class="form-group">
+          <label>Sender Name / Company</label>
+          <input type="text" name="sender" placeholder="Amazon, DTDC, Blue Dart...">
+        </div>
+        <button type="submit" name="action" value="parcel" class="btn btn-primary btn-full">Log Parcel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Recent Entries -->
+  <div class="card">
+    <div class="card-title">Recent Entry / Exit (Last 15)</div>
+    {% if recent_entries %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Room</th><th>Phone</th><th>Time</th><th>Status</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for e in recent_entries %}
+        <tr>
+          <td style="font-weight:500;">{{ e['name'] or '—' }}</td>
+          <td><span class="badge badge-blue">{{ e['room'] or '—' }}</span></td>
+          <td style="font-family:var(--mono);font-size:.8rem;">{{ e['student_phone'] }}</td>
+          <td style="font-family:var(--mono);font-size:.75rem;color:var(--muted);">{{ e['time'][:16] if e['time'] else '—' }}</td>
+          <td>
+            {% if e['status']=='IN' %}<span class="badge badge-green">IN</span>
+            {% else %}<span class="badge badge-red">OUT</span>{% endif %}
+          </td>
+          <td style="color:var(--muted);font-size:.8rem;">{{ e['guard_note'] or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">No entry/exit records</div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Parcels -->
+  <div class="card">
+    <div class="card-title">Recent Parcels</div>
+    {% if recent_parcels %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Student</th><th>Parcel</th><th>Sender</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for p in recent_parcels %}
+        <tr>
+          <td style="font-weight:500;">{{ p['name'] or p['student_phone'] }}</td>
+          <td>{{ p['parcel_name'] }}</td>
+          <td style="color:var(--muted);">{{ p['sender'] or '—' }}</td>
+          <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+          <td>
+            {% if p['status']=='Arrived' %}<span class="badge badge-yellow">Arrived</span>
+            {% else %}<span class="badge badge-green">Collected</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">No parcels logged</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

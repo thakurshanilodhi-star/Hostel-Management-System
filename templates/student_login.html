@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Student Login — HostelPro{% endblock %}
+{% block content %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:min(420px,100%);">
+
+    <!-- Brand -->
+    <div style="text-align:center;margin-bottom:2.5rem;">
+      <div style="font-family:var(--mono);font-size:1.8rem;letter-spacing:4px;color:var(--accent);margin-bottom:.5rem;">HOSTEL<span style="color:var(--text);">PRO</span></div>
+      <div style="color:var(--muted);font-size:.8rem;letter-spacing:2px;text-transform:uppercase;">Student Portal</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Sign In</div>
+
+      {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="form-group">
+          <label>Phone Number or Email</label>
+          <input type="text" name="user" placeholder="9876543210 or student@email.com" required autofocus>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:.5rem;">Sign In</button>
+      </form>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem;">
+      <span style="color:var(--muted);font-size:.875rem;">New student? </span>
+      <a href="/apply" style="color:var(--accent);font-size:.875rem;text-decoration:none;font-weight:600;">Apply for Admission →</a>
+    </div>
+
+    <div style="text-align:center;margin-top:.75rem;">
+      <a href="/admin/login" style="color:var(--muted);font-size:.75rem;text-decoration:none;">Admin Login</a>
+      &nbsp;·&nbsp;
+      <a href="/guard" style="color:var(--muted);font-size:.75rem;text-decoration:none;">Guard Panel</a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

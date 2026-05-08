@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — HostelPro{% endblock %}
+
+{% block nav %}
+<nav>
+  <a href="/dashboard" class="nav-brand">HOSTEL<span>PRO</span></a>
+  <div class="nav-links">
+    <span style="color:var(--muted);font-size:.8rem;font-family:var(--mono);">{{ student['name'] }}</span>
+    <span class="badge badge-blue">Room {{ student['room'] }}</span>
+    <a href="/logout" class="btn btn-ghost btn-sm">Logout</a>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- Welcome + Due Alert -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+    <div>
+      <h1 style="font-family:var(--mono);font-size:1.4rem;letter-spacing:1px;">Welcome back, <span style="color:var(--accent);">{{ student['name'].split()[0] }}</span></h1>
+      <p style="color:var(--muted);font-size:.875rem;margin-top:.25rem;">{{ student['email'] }} · {{ student['phone'] }}</p>
+    </div>
+    {% if due > 0 %}
+    <div class="alert alert-warning" style="margin:0;display:inline-flex;align-items:center;gap:1rem;">
+      ⚠️ <span><strong>₹{{ due }}</strong> fee due</span>
+      <a href="/pay/{{ student['phone'] }}" class="btn btn-warning btn-sm">Pay Now</a>
+    </div>
+    {% else %}
+    <div class="alert alert-success" style="margin:0;">✅ All fees paid</div>
+    {% endif %}
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card stat-blue">
+      <div class="label">Room</div>
+      <div class="value">{{ student['room'] or '—' }}</div>
+      <div class="sub">Your allocated room</div>
+    </div>
+    <div class="stat-card {% if due > 0 %}stat-red{% else %}stat-green{% endif %}">
+      <div class="label">Fee Due</div>
+      <div class="value">₹{{ due }}</div>
+      <div class="sub">of ₹{{ student['fee'] or 5000 }} total</div>
+    </div>
+    <div class="stat-card stat-yellow">
+      <div class="label">Complaints</div>
+      <div class="value">{{ complaints|length }}</div>
+      <div class="sub">Total submitted</div>
+    </div>
+    <div class="stat-card stat-blue">
+      <div class="label">Parcels</div>
+      <div class="value">{{ parcels|selectattr('status','equalto','Arrived')|list|length }}</div>
+      <div class="sub">Awaiting pickup</div>
+    </div>
+  </div>
+
+  <!-- Notices -->
+  {% if notices %}
+  <div class="card">
+    <div class="card-title">📢 Notices</div>
+    {% for n in notices %}
+    <div style="padding:.75rem 0;border-bottom:1px solid var(--border);display:flex;gap:1rem;align-items:flex-start;">
+      {% if n['priority']=='Urgent' %}
+      <span class="badge badge-red">Urgent</span>
+      {% elif n['priority']=='Important' %}
+      <span class="badge badge-yellow">Important</span>
+      {% else %}
+      <span class="badge badge-blue">Notice</span>
+      {% endif %}
+      <div>
+        <div style="font-weight:600;font-size:.9rem;">{{ n['title'] }}</div>
+        <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem;">{{ n['body'] }}</div>
+        <div style="color:var(--muted);font-size:.7rem;font-family:var(--mono);margin-top:.25rem;">{{ n['date'] }} · {{ n['author'] }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <div class="tabs">
+      <button class="tab active" data-target="complaints">Complaints</button>
+      <button class="tab" data-target="leaves">Leave</button>
+      <button class="tab" data-target="parcels">Parcels</button>
+      <button class="tab" data-target="payments">Payments</button>
+      <button class="tab" data-target="meals">Meals</button>
+      <button class="tab" data-target="entry">Entry Log</button>
+      <button class="tab" data-target="transfers">Room Transfer</button>
+    </div>
+
+    <!-- COMPLAINTS -->
+    <div class="tab-panel active" id="complaints">
+      <div class="grid-2" style="margin-bottom:1.5rem;">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Submit Complaint</div>
+          <form method="POST">
+            <input type="hidden" name="action" value="complaint">
+            <div class="form-group">
+              <label>Category</label>
+              <select name="category">
+                <option>General</option>
+                <option>Maintenance</option>
+                <option>Food</option>
+                <option>Electricity</option>
+                <option>Water</option>
+                <option>Cleanliness</option>
+                <option>Security</option>
+                <option>Internet</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Complaint Details</label>
+              <textarea name="msg" rows="4" placeholder="Describe your issue..." required></textarea>
+            </div>
+            <button class="btn btn-primary btn-full">Submit</button>
+          </form>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">My Complaints</div>
+          {% if complaints %}
+          {% for c in complaints %}
+          <div style="padding:.75rem 0;border-bottom:1px solid rgba(30,58,95,.4);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem;">
+              <span class="badge badge-gray">{{ c['category'] }}</span>
+              {% if c['status']=='Resolved' %}<span class="badge badge-green">Resolved</span>
+              {% elif c['status']=='In Progress' %}<span class="badge badge-yellow">In Progress</span>
+              {% else %}<span class="badge badge-red">Pending</span>{% endif %}
+            </div>
+            <div style="font-size:.875rem;margin:.25rem 0;">{{ c['message'] }}</div>
+            {% if c['admin_reply'] %}
+            <div style="background:rgba(59,130,246,.1);border-left:3px solid var(--accent);padding:.5rem .75rem;margin-top:.5rem;font-size:.8rem;color:var(--muted);">
+              Admin: {{ c['admin_reply'] }}
+            </div>
+            {% endif %}
+            <div style="color:var(--muted);font-size:.7rem;font-family:var(--mono);margin-top:.25rem;">{{ c['date'] }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty">No complaints submitted</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE -->
+    <div class="tab-panel" id="leaves">
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Apply for Leave</div>
+          <form method="POST">
+            <input type="hidden" name="action" value="leave">
+            <div class="form-row">
+              <div class="form-group">
+                <label>From Date</label>
+                <input type="date" name="from_date" required>
+              </div>
+              <div class="form-group">
+                <label>To Date</label>
+                <input type="date" name="to_date" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Reason</label>
+              <textarea name="reason" rows="3" placeholder="Purpose of leave..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-full">Apply Leave</button>
+          </form>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">Leave History</div>
+          {% if leaves %}
+          {% for l in leaves %}
+          <div style="padding:.75rem 0;border-bottom:1px solid rgba(30,58,95,.4);">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:.875rem;font-weight:500;">{{ l['from_date'] }} → {{ l['to_date'] }}</span>
+              {% if l['status']=='Approved' %}<span class="badge badge-green">Approved</span>
+              {% elif l['status']=='Rejected' %}<span class="badge badge-red">Rejected</span>
+              {% else %}<span class="badge badge-yellow">Pending</span>{% endif %}
+            </div>
+            <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem;">{{ l['reason'] or 'No reason provided' }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty">No leave applications</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- PARCELS -->
+    <div class="tab-panel" id="parcels">
+      <div class="card">
+        <div class="card-title">My Parcels</div>
+        {% if parcels %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Parcel</th><th>Sender</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in parcels %}
+            <tr>
+              <td style="font-weight:500;">{{ p['parcel_name'] }}</td>
+              <td style="color:var(--muted);">{{ p['sender'] or '—' }}</td>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+              <td>
+                {% if p['status']=='Arrived' %}<span class="badge badge-yellow">Arrived</span>
+                {% elif p['status']=='Collected' %}<span class="badge badge-green">Collected</span>
+                {% else %}<span class="badge badge-gray">{{ p['status'] }}</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No parcels on record</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="tab-panel" id="payments">
+      <div class="card">
+        <div class="card-title">Payment History</div>
+        {% if payments %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Month</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for p in payments %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ p['date'] }}</td>
+              <td style="color:var(--muted);">{{ p['month'] or '—' }}</td>
+              <td style="font-family:var(--mono);color:var(--green);font-weight:700;">₹{{ p['amount'] }}</td>
+              <td><span class="badge badge-blue">{{ p['mode'] }}</span></td>
+              <td style="font-family:var(--mono);font-size:.7rem;color:var(--muted);">{{ p['receipt_no'] or '—' }}</td>
+              <td><span class="badge badge-green">{{ p['status'] }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No payment records</div>
+        {% endif %}
+        {% if due > 0 %}
+        <div style="margin-top:1rem;text-align:right;">
+          <a href="/pay/{{ student['phone'] }}" class="btn btn-primary">Pay ₹{{ due }} Now</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- MEALS -->
+    <div class="tab-panel" id="meals">
+      <div class="card">
+        <div class="card-title">Today's Menu</div>
+        {% if meals %}
+        <div class="grid-3">
+          {% for m in meals %}
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.25rem;">
+            <div style="font-family:var(--mono);font-size:.7rem;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-bottom:.5rem;">{{ m['session'] }}</div>
+            <div style="font-size:.9rem;line-height:1.6;margin-bottom:1rem;">{{ m['menu'] or 'Menu not posted yet' }}</div>
+            {% if m['rating_count'] > 0 %}
+            <div style="color:var(--muted);font-size:.75rem;">Avg rating: {{ "%.1f"|format(m['rating_sum']/m['rating_count']) }}/5 ({{ m['rating_count'] }} votes)</div>
+            {% endif %}
+            <form method="POST" action="/meal/rate" style="margin-top:.75rem;">
+              <input type="hidden" name="meal_id" value="{{ m['id'] }}">
+              <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+                <select name="rating" style="width:auto;padding:.35rem .5rem;font-size:.8rem;">
+                  <option value="5">⭐⭐⭐⭐⭐</option>
+                  <option value="4">⭐⭐⭐⭐</option>
+                  <option value="3" selected>⭐⭐⭐</option>
+                  <option value="2">⭐⭐</option>
+                  <option value="1">⭐</option>
+                </select>
+                <button class="btn btn-ghost btn-sm">Rate</button>
+              </div>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">No meal posted for today</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ENTRY LOG -->
+    <div class="tab-panel" id="entry">
+      <div class="card">
+        <div class="card-title">Entry / Exit Log</div>
+        {% if entry_log %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date & Time</th><th>Status</th><th>Note</th></tr></thead>
+            <tbody>
+            {% for e in entry_log %}
+            <tr>
+              <td style="font-family:var(--mono);font-size:.75rem;">{{ e['time'] }}</td>
+              <td>
+                {% if e['status']=='IN' %}<span class="badge badge-green">IN</span>
+                {% else %}<span class="badge badge-red">OUT</span>{% endif %}
+              </td>
+              <td style="color:var(--muted);font-size:.8rem;">{{ e['guard_note'] or '—' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty">No entry records found</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ROOM TRANSFER -->
+    <div class="tab-panel" id="transfers">
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Request Room Transfer</div>
+          <form method="POST">
+            <input type="hidden" name="action" value="transfer">
+            <div class="form-group">
+              <label>Preferred Room Type</label>
+              <select name="room_type">
+                <option value="Single">Single Room</option>
+                <option value="Double">Double Room</option>
+                <option value="Triple">Triple Room</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Reason for Transfer</label>
+              <textarea name="reason" rows="3" placeholder="Why do you want to transfer?"></textarea>
+            </div>
+            <button class="btn btn-primary btn-full">Request Transfer</button>
+          </form>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">Transfer Requests</div>
+          {% if transfers %}
+          {% for t in transfers %}
+          <div style="padding:.75rem 0;border-bottom:1px solid rgba(30,58,95,.4);">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:.875rem;">→ {{ t['to_room_type'] }} Room</span>
+              {% if t['status']=='Approved' %}<span class="badge badge-green">Approved</span>
+              {% elif t['status']=='Rejected' %}<span class="badge badge-red">Rejected</span>
+              {% else %}<span class="badge badge-yellow">Pending</span>{% endif %}
+            </div>
+            <div style="color:var(--muted);font-size:.8rem;margin-top:.25rem;">{{ t['reason'] }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="empty">No transfer requests</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
